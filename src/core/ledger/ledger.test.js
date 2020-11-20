@@ -87,6 +87,7 @@ describe("core/ledger/ledger", () => {
           balance: "0",
           active: false,
           identity,
+          distributionHistory: [],
         });
         expect(l.eventLog()).toEqual([
           {
@@ -432,13 +433,19 @@ describe("core/ledger/ledger", () => {
     describe("mergeIdentitiy", () => {
       it("gives the target's grain balance and paid to the base account", () => {
         const ledger = ledgerWithActiveIdentities();
-        ledger._allocateGrain(id1, g("100"));
-        ledger._allocateGrain(id2, g("10"));
+        ledger._allocateGrain(id1, g("100"), "BALANCED", 0);
+        ledger._allocateGrain(id1, g("1"), "RECENT", 2);
+        ledger._allocateGrain(id2, g("10"), "IMMEDIATE", 1);
         ledger.mergeIdentities({base: id1, target: id2});
 
         const account = ledger.account(id1);
-        expect(account.balance).toEqual(g("110"));
-        expect(account.paid).toEqual(g("110"));
+        expect(account.balance).toEqual(g("111"));
+        expect(account.paid).toEqual(g("111"));
+        expect(account.distributionHistory).toEqual([
+          {amount: g("100"), timestampMs: 0, policyType: "BALANCED"},
+          {amount: g("10"), timestampMs: 1, policyType: "IMMEDIATE"},
+          {amount: g("1"), timestampMs: 2, policyType: "RECENT"},
+        ]);
       });
       it("gives the target's aliases to the base account", () => {
         const alias = {
@@ -612,6 +619,7 @@ describe("core/ledger/ledger", () => {
         paid: "0",
         balance: "0",
         active: true,
+        distributionHistory: [],
       });
       expect(ledger.eventLog()).toEqual([
         expect.anything(),
@@ -634,6 +642,7 @@ describe("core/ledger/ledger", () => {
         paid: "0",
         balance: "0",
         active: false,
+        distributionHistory: [],
       });
       expect(ledger.eventLog()).toEqual([
         expect.anything(),
@@ -687,13 +696,16 @@ describe("core/ledger/ledger", () => {
     });
     it("an inactive account may hold onto a Grain balance", () => {
       const ledger = ledgerWithActiveIdentities();
-      ledger._allocateGrain(id1, g("50"));
+      ledger._allocateGrain(id1, g("50"), "IMMEDIATE", 1);
       ledger.deactivate(id1);
       expect(ledger.account(id1)).toEqual({
         identity: identity1(),
         paid: g("50"),
         balance: g("50"),
         active: false,
+        distributionHistory: [
+          {amount: g("50"), timestampMs: 1, policyType: "IMMEDIATE"},
+        ],
       });
     });
 
@@ -815,12 +827,18 @@ describe("core/ledger/ledger", () => {
           balance: g("3"),
           paid: g("3"),
           active: true,
+          distributionHistory: [
+            {amount: g("3"), timestampMs: 1, policyType: "IMMEDIATE"},
+          ],
         };
         const ac2 = {
           identity: identity2(),
           balance: g("7"),
           paid: g("7"),
           active: true,
+          distributionHistory: [
+            {amount: g("7"), timestampMs: 1, policyType: "IMMEDIATE"},
+          ],
         };
         expect(ledger.accounts()).toEqual([ac1, ac2]);
       });
@@ -853,12 +871,20 @@ describe("core/ledger/ledger", () => {
           balance: g("13"),
           paid: g("13"),
           active: true,
+          distributionHistory: [
+            {amount: g("3"), timestampMs: 1, policyType: "IMMEDIATE"},
+            {amount: g("10"), timestampMs: 1, policyType: "BALANCED"},
+          ],
         };
         const ac2 = {
           identity: identity2(),
           balance: g("17"),
           paid: g("17"),
           active: true,
+          distributionHistory: [
+            {amount: g("7"), timestampMs: 1, policyType: "IMMEDIATE"},
+            {amount: g("10"), timestampMs: 1, policyType: "BALANCED"},
+          ],
         };
         expect(ledger.accounts()).toEqual([ac1, ac2]);
       });
@@ -957,8 +983,8 @@ describe("core/ledger/ledger", () => {
     describe("transferGrain", () => {
       it("works in a simple legal case", () => {
         const ledger = ledgerWithActiveIdentities();
-        ledger._allocateGrain(id1, g("100"));
-        ledger._allocateGrain(id2, g("5"));
+        ledger._allocateGrain(id1, g("100"), "IMMEDIATE", 1);
+        ledger._allocateGrain(id2, g("5"), "RECENT", 2);
         setFakeDate(5);
         ledger.transferGrain({
           from: id1,
@@ -971,12 +997,18 @@ describe("core/ledger/ledger", () => {
           paid: g("100"),
           balance: g("20"),
           active: true,
+          distributionHistory: [
+            {amount: g("100"), timestampMs: 1, policyType: "IMMEDIATE"},
+          ],
         };
         const account2 = {
           identity: identity2(),
           paid: g("5"),
           balance: g("85"),
           active: true,
+          distributionHistory: [
+            {amount: g("5"), timestampMs: 2, policyType: "RECENT"},
+          ],
         };
         expect(ledger.account(id1)).toEqual(account1);
         expect(ledger.account(id2)).toEqual(account2);
@@ -1025,7 +1057,7 @@ describe("core/ledger/ledger", () => {
       });
       it("an account may transfer to itself", () => {
         const ledger = ledgerWithActiveIdentities();
-        ledger._allocateGrain(id1, g("2"));
+        ledger._allocateGrain(id1, g("2"), "IMMEDIATE", 1);
         ledger.transferGrain({
           from: id1,
           to: id1,
@@ -1037,12 +1069,15 @@ describe("core/ledger/ledger", () => {
           paid: g("2"),
           balance: g("2"),
           active: true,
+          distributionHistory: [
+            {amount: g("2"), timestampMs: 1, policyType: "IMMEDIATE"},
+          ],
         };
         expect(ledger.account(id1)).toEqual(account);
       });
       it("an account may not be overdrawn", () => {
         const ledger = ledgerWithActiveIdentities();
-        ledger._allocateGrain(id1, g("2"));
+        ledger._allocateGrain(id1, g("2"), "IMMEDIATE", 1);
         const thunk = () =>
           ledger.transferGrain({
             from: id1,

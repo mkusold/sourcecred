@@ -11,7 +11,7 @@ describe("core/ledger/computeDistribution", () => {
     it("only includes active GrainAccounts", () => {
       const ledger = new Ledger();
       const active = ledger.createIdentity("USER", "active");
-      ledger._allocateGrain(active, G.fromString("1"));
+      ledger._allocateGrain(active, G.fromString("1"), "IMMEDIATE", 1);
       ledger.activate(active);
       ledger.createIdentity("USER", "inactive");
       const accounts = ledger.accounts().map((a) => ({
@@ -49,7 +49,7 @@ describe("core/ledger/computeDistribution", () => {
     it("time slices the cred as expected", () => {
       const ledger = new Ledger();
       const active = ledger.createIdentity("USER", "active");
-      ledger._allocateGrain(active, G.fromString("1"));
+      ledger._allocateGrain(active, G.fromString("1"), "IMMEDIATE", 1);
       ledger.activate(active);
       ledger.createIdentity("USER", "inactive");
       const accounts = ledger.accounts().map((a) => ({

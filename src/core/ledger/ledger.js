@@ -26,9 +26,16 @@ import {type TimestampMs} from "../../util/timestamp";
 import * as NullUtil from "../../util/null";
 import * as uuid from "../../util/uuid";
 import {type Distribution, parser as distributionParser} from "./distribution";
+import {type AllocationPolicyType} from "./policies";
 import * as G from "./grain";
 import {JsonLog} from "../../util/jsonLog";
 import * as C from "../../util/combo";
+
+type AccountLevelDistribution = {|
+  amount: G.Grain,
+  timestampMs: TimestampMs,
+  policyType: AllocationPolicyType,
+|};
 
 /**
  * Every Identity in the ledger has an Account.
@@ -39,6 +46,8 @@ type MutableAccount = {|
   balance: G.Grain,
   // The amount of Grain this account has received in past Distributions
   paid: G.Grain,
+  // A history of Grain distributions to the account in chronological order
+  distributionHistory: Array<AccountLevelDistribution>,
   // Whether or not the account is currently "active". An inactive account
   // may not receive or transfer Grain. Accounts start inactive, and must
   // be explicitly activated.
@@ -210,6 +219,7 @@ export class Ledger {
       paid: G.ZERO,
       identity,
       active: false,
+      distributionHistory: [],
     });
   }
 
@@ -266,6 +276,9 @@ export class Ledger {
     };
     baseAccount.identity = updatedIdentity;
     baseAccount.paid = G.add(baseAccount.paid, targetAccount.paid);
+    baseAccount.distributionHistory = baseAccount.distributionHistory
+      .concat(targetAccount.distributionHistory)
+      .sort((a, b) => a.timestampMs - b.timestampMs);
     baseAccount.balance = G.add(baseAccount.balance, targetAccount.balance);
     this._accounts.delete(targetIdentity.id);
     this._nameToId.delete(targetIdentity.name);
@@ -467,9 +480,14 @@ export class Ledger {
       }
     }
     // Mutations beckon: method must not fail after this comment
-    for (const {receipts} of distribution.allocations) {
+    for (const {receipts, policy} of distribution.allocations) {
       for (const {id, amount} of receipts) {
-        this._allocateGrain(id, amount);
+        this._allocateGrain(
+          id,
+          amount,
+          policy.policyType,
+          distribution.credTimestamp
+        );
       }
     }
     if (distribution.credTimestamp > this._lastDistributionTimestamp) {
@@ -682,9 +700,15 @@ export class Ledger {
 
   // Helper method for recording that Grain was allocated to a identity.
   // Increases the identity's paid amount and balance in sync.
-  _allocateGrain(recipient: IdentityId, amount: G.Grain) {
+  _allocateGrain(
+    recipient: IdentityId,
+    amount: G.Grain,
+    policyType: AllocationPolicyType,
+    timestampMs: TimestampMs
+  ) {
     const account = this._mutableAccount(recipient);
     account.paid = G.add(amount, account.paid);
+    account.distributionHistory.push({amount, timestampMs, policyType});
     account.balance = G.add(amount, account.balance);
   }
 }
