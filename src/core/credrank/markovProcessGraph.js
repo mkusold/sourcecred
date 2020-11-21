@@ -67,7 +67,8 @@ import * as NullUtil from "../../util/null";
 import * as MapUtil from "../../util/map";
 import type {TimestampMs} from "../../util/timestamp";
 import {type SparseMarkovChain} from "../algorithm/markovChain";
-import {type IntervalSequence} from "../interval";
+import {type IntervalSequence, intervalsFromBoundaries} from "../interval";
+import {utcWeek} from "d3-time";
 
 import {type MarkovNode} from "./markovNode";
 
@@ -457,6 +458,21 @@ export class MarkovProcessGraph {
       mintTransitionProbabilities,
       radiationTransitionProbabilities
     );
+  }
+
+  /**
+    Returns a best-effort reconstrunction of the intervals used to make this graph.
+    Assumes that the last interval's end time is the next utcWeek.
+   */
+  intervals(): IntervalSequence {
+    const finiteEpochBoundaries = this._epochBoundaries.slice(
+      1,
+      this._epochBoundaries.length - 1
+    );
+    finiteEpochBoundaries.push(
+      utcWeek.ceil(finiteEpochBoundaries[finiteEpochBoundaries.length - 1] + 1)
+    );
+    return intervalsFromBoundaries(finiteEpochBoundaries);
   }
 
   epochBoundaries(): $ReadOnlyArray<number> {

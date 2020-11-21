@@ -8,6 +8,7 @@ import {
   graphIntervals,
   weekIntervals,
   intervalSequence,
+  intervalsFromBoundaries,
 } from "./interval";
 
 describe("src/core/interval", () => {
@@ -247,6 +248,25 @@ describe("src/core/interval", () => {
         {
           startTimeMs: WEEK_END,
           endTimeMs: +utcWeek.ceil(WEEK_END + 1),
+        },
+      ]);
+    });
+  });
+
+  describe(".intervalsFromBoundaries", () => {
+    it("works", () => {
+      expect(intervalsFromBoundaries([0, 2, 3, 6])).toEqual([
+        {
+          startTimeMs: 0,
+          endTimeMs: 2,
+        },
+        {
+          startTimeMs: 2,
+          endTimeMs: 3,
+        },
+        {
+          startTimeMs: 3,
+          endTimeMs: 6,
         },
       ]);
     });

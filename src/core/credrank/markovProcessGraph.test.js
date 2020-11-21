@@ -13,6 +13,7 @@ import {
 import {NodeAddress as NA, EdgeAddress as EA} from "../graph";
 import * as uuid from "../../util/uuid"; // for spy purposes
 import {intervalSequence} from "../interval";
+import {utcWeek} from "d3-time";
 
 import {seedGadget, accumulatorGadget, epochGadget} from "./nodeGadgets";
 import {
@@ -456,6 +457,46 @@ describe("core/credrank/markovProcessGraph", () => {
       expect([...mpg1.edgeOrder()]).toEqual([...mpg2.edgeOrder()]);
       expect([...mpg1.nodes()]).toEqual([...mpg2.nodes()]);
       expect([...mpg1.edges()]).toEqual([...mpg2.edges()]);
+    });
+  });
+
+  describe(".intervals", () => {
+    it("should reconstruct utcWeek invervals to their original form", async () => {
+      const w1 = +utcWeek.ceil(0);
+      const w2 = +utcWeek.ceil(w1 + 1);
+      const w3 = +utcWeek.ceil(w2 + 1);
+      const w4 = +utcWeek.ceil(w3 + 1);
+      const weekIntervals = intervalSequence([
+        {startTimeMs: w1, endTimeMs: w2},
+        {startTimeMs: w2, endTimeMs: w3},
+        {startTimeMs: w3, endTimeMs: w4},
+      ]);
+      const mpg = MarkovProcessGraph.new({
+        ...args(),
+        intervals: weekIntervals,
+      });
+      expect(mpg.epochBoundaries()).toEqual([-Infinity, w1, w2, w3, Infinity]);
+      expect(mpg.intervals()).toEqual(weekIntervals);
+    });
+
+    it("should best-effort reconstruct non-week invervals with the last endTimeMs as a utcWeek", async () => {
+      const mpg = MarkovProcessGraph.new(args());
+      expect(mpg.epochBoundaries()).toEqual([
+        -Infinity,
+        interval0.startTimeMs,
+        interval1.startTimeMs,
+        Infinity,
+      ]);
+      expect(mpg.intervals()).not.toEqual(intervals);
+      expect(mpg.intervals()).toEqual(
+        intervalSequence([
+          interval0,
+          {
+            startTimeMs: interval1.startTimeMs,
+            endTimeMs: +utcWeek.ceil(interval1.startTimeMs + 1),
+          },
+        ])
+      );
     });
   });
 });

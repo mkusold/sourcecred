@@ -10,6 +10,7 @@ import {
 import {type MarkovEdge, type TransitionProbability} from "./markovEdge";
 import {toCompat, fromCompat, type Compatible} from "../../util/compat";
 import {payoutGadget} from "./edgeGadgets";
+import {type IntervalSequence} from "../interval";
 
 export type Node = {|
   +address: NodeAddressT,
@@ -100,6 +101,10 @@ export class CredGraph {
       });
       yield {address, description, credPerEpoch, cred: totalCred, id};
     }
+  }
+
+  intervals(): IntervalSequence {
+    return this._mpg.intervals();
   }
 
   *inNeighbors(addr: NodeAddressT): Iterator<Edge> {

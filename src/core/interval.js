@@ -168,6 +168,17 @@ export function weekIntervals(
   endMs = utcWeek.ceil(endMs + 1);
   const boundaries = utcWeek.range(startMs, endMs);
   boundaries.push(endMs);
+  return intervalsFromBoundaries(boundaries);
+}
+
+/**
+  Produce an interval sequence based on the intervals joined by the boundaries.
+  The first interval's startTimeMs is the first number in the input array.
+  The last interval's endTimeMs is the last number in the input array.
+ */
+export function intervalsFromBoundaries(
+  boundaries: $ReadOnlyArray<number>
+): IntervalSequence {
   const intervals = [];
   for (let i = 0; i < boundaries.length - 1; i++) {
     intervals.push({
