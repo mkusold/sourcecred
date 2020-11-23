@@ -108,6 +108,7 @@ describe("api/grainConfig", () => {
           {
             budget: fromInteger(20),
             policyType: "IMMEDIATE",
+            numPeriodsLookback: 1,
           },
           {
             budget: fromInteger(30),

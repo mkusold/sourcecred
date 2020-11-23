@@ -11,6 +11,7 @@ export type GrainConfig = {|
   +balancedPerWeek?: number,
   +recentPerWeek?: number,
   +recentWeeklyDecayRate?: number,
+  +numPeriodsLookback?: number,
   +maxSimultaneousDistributions?: number,
 |};
 
@@ -51,9 +52,11 @@ export function toDistributionPolicy(x: GrainConfig): DistributionPolicy {
   }
   const allocationPolicies = [];
   if (immediatePerWeek > 0) {
+    const numPeriodsLookback = NullUtil.orElse(x.numPeriodsLookback, 1);
     allocationPolicies.push({
       budget: G.fromInteger(immediatePerWeek),
       policyType: "IMMEDIATE",
+      numPeriodsLookback,
     });
   }
   if (recentPerWeek > 0) {
