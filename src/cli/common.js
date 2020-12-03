@@ -29,6 +29,11 @@ import {CredGraph, parser as credGraphParser} from "../core/credrank/credGraph";
 import {loadFileWithDefault, loadJsonWithDefault} from "../util/disk";
 import {parser as pluginBudgetParser} from "../api/pluginBudgetConfig";
 import {applyBudget, type Budget} from "../core/mintBudget";
+import {
+  parser as currencyConfigParser,
+  type CurrencyDetails,
+} from "../api/currencyConfig";
+import {DEFAULT_NAME, DEFAULT_SUFFIX} from "../api/currencyConfig";
 
 import * as Weights from "../core/weights";
 
@@ -196,4 +201,23 @@ export async function saveLedger(
 function loadPluginBudget(baseDir: string): Promise<Budget | null> {
   const budgetPath = pathJoin(baseDir, "config", "pluginBudgets.json");
   return loadJsonWithDefault(budgetPath, pluginBudgetParser, () => null);
+}
+
+/**
+ * Load the currency details from config, falling back on defaults
+ * if need be.
+ */
+export async function loadCurrencyDetails(
+  currencyDetailsPath: string
+): Promise<CurrencyDetails> {
+  const {name, suffix} = await loadJsonWithDefault(
+    currencyDetailsPath,
+    currencyConfigParser,
+    () => ({
+      name: DEFAULT_NAME,
+      suffix: DEFAULT_SUFFIX,
+    })
+  );
+
+  return {name, suffix};
 }
